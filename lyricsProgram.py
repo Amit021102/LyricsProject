@@ -3,15 +3,9 @@ import re
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Base, Song, Verse, Line, Word, Lemma, WordOccurrence
-from nltk.stem import WordNetLemmatizer
-from nltk import download
+from utils import lemmatize
 
-# Ensure required NLTK data is available
-download('wordnet')
-download('omw-1.4')
 
-# Initialize lemmatizer
-lemmatizer = WordNetLemmatizer()
 
 # Connect to PostgreSQL
 engine = create_engine("postgresql+pg8000://postgres:rya33rya@localhost:5432/lyrics_db")
@@ -68,7 +62,7 @@ def process_song(file_path):
             session.flush()
 
             for word_text in words_in_line:
-                lemma_text = lemmatizer.lemmatize(word_text)
+                lemma_text = lemmatize(word_text)
 
                 # Lemma
                 if lemma_text not in lemma_dict:

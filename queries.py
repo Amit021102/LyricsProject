@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
-from models import Base, Song, Verse, Line, Word, Lemma, WordOccurrence
+from models import Base, Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
 from utils import lemmatize, limitContext
 
 
@@ -136,4 +136,45 @@ def findLemmaMatches(text: str):
     )
     if not matches:
         print(f"No matches found for lemma '{lemma_text}'")
-    return matches
+
+    res1 = []
+    res2 = []
+    for instance in matches:
+        context = []
+        begin, end = limitContext(instance)
+        for i in range(begin, end+1):
+            line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
+            context.append(line_text)
+        res1.append(instance)
+        res2.append(context)
+        return res1, res2
+    
+def findClusterMatches(name: str):
+    name = name.lower()
+    cluster_id = session.query(Cluster).filter(Cluster.name == name).first().ClusterID
+    words = session.query(WordInCluster).filter(Cluster.ClusterID == cluster_id).all()
+
+    res1 = []
+    res2 = []
+
+    for word in words:
+        matches = (
+            session.query(WordOccurrence)
+            .join(Word)
+            .filter(WordOccurrence.WordID == word.WordID)
+            .all()
+        )
+        if not matches:
+            print(f"No matches found for word '{word.word.text}'")
+
+        
+        for instance in matches:
+            context = []
+            begin, end = limitContext(instance)
+            for i in range(begin, end+1):
+                line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
+                context.append(line_text)
+            res1.append(instance)
+            res2.append(context)
+
+    return res1, res2

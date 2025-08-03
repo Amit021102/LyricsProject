@@ -1,13 +1,13 @@
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from models import Base
 
-# 👇 Replace with your real DB credentials
 engine = create_engine('postgresql+pg8000://postgres:rya33rya@localhost:5432/lyrics_db')
+Session = sessionmaker(bind=engine)
 
-# 👇 This line creates all the tables in your PostgreSQL database
-Base.metadata.create_all(engine)
+# CREATE ALL TABLES
+# Base.metadata.create_all(engine)
+# print("✅ Tables created successfully!")
 
-print("✅ Tables created successfully!")
-
-# # DROP ALL TABLES
+# DROP ALL TABLES
 # Base.metadata.drop_all(engine)
