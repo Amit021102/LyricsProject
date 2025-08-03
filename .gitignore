@@ -4,3 +4,4 @@ node_modules/
 *.txt
 *.json
 archive/
+__pycache__/
