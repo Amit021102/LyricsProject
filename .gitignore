@@ -1,7 +1,7 @@
 node_modules/
 .env
 *.log
-*.txt
 *.json
 archive/
 __pycache__/
+.pytest_cache/

@@ -7,27 +7,41 @@ from setup_db import Session
 session = Session()
 
 
+# readty_to_add = [
+#     "dodger blue.txt",
+#     "gloria.txt",
+#     "gnx.txt",
+#     "heart pt. 6.txt",
+#     "hey now.txt",
+#     "luther.txt",
+#     "man at the garden.txt",
+#     "peekaboo.txt",
+#     "reincarnated.txt",
+#     "squabble up.txt",
+#     "tv off.txt",
+#     "wacced out murals.txt"
+# ]
+
+
 readty_to_add = [
-    "dodger blue.txt",
-    "gloria.txt",
-    "gnx.txt",
-    "heart pt. 6.txt",
-    "hey now.txt",
-    "luther.txt",
-    "man at the garden.txt",
-    "peekaboo.txt",
-    "reincarnated.txt",
-    "squabble up.txt",
-    "tv off.txt",
-    "wacced out murals.txt"
+    "friday night lights.txt",
+    "too deep for the intro.txt",
+    "before im gone.txt",
+    "back to the topic.txt",
+    "you got it.txt",
+    "villematic.txt",
+    "enchanted.txt",
+    "blow up.txt",
+    "higher.txt",
+    "in the morning.txt"
 ]
 
 
 # adding a song
-# for song in readty_to_add:
-#     file_path = os.path.join("lyrics", song)
-#     print(f'working on {file_path}')
-#     process_song(file_path)
+for song in readty_to_add:
+    file_path = os.path.join("lyrics", song)
+    print(f'working on {file_path}')
+    process_song(file_path)
 
 # print(wordInSong(10, "luther_lyrics.txt"))
 
@@ -59,11 +73,11 @@ readty_to_add = [
 #         print(line)
 
 # MATCH CLUSTER
-matches, contexts = findClusterMatches('numbers')
-for i in range(len(matches)):
-    print(f'{matches[i].word.Text} -\ts-{matches[i].SongID}\tv-{matches[i].verse.VerseOrder}\tl-{matches[i].line.LineNumberInVerse}')
-    for line in contexts[i]:
-        print(line)
+# matches, contexts = findClusterMatches('numbers')
+# for i in range(len(matches)):
+#     print(f'{matches[i].word.Text} -\ts-{matches[i].SongID}\tv-{matches[i].verse.VerseOrder}\tl-{matches[i].line.LineNumberInVerse}')
+#     for line in contexts[i]:
+#         print(line)
 
 
 # MANUALLY CREATING A CLUSTER

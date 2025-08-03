@@ -1,18 +1,12 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import func
-from models import Base, Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
+from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
 from utils import lemmatize, limitContext
 
 
+# the number of lines added before and after the wanted line in match finding
+CONTEXT = 0
 
-CONTEXT = 1
 
-engine = create_engine("postgresql+pg8000://postgres:rya33rya@localhost:5432/lyrics_db")
-Session = sessionmaker(bind=engine)
-session = Session()
-
-def wordInSong(index, song_name):
+def wordInSong(index, song_name, session):
 
     print('entered')
 
@@ -29,7 +23,7 @@ def wordInSong(index, song_name):
     text = session.query(Word).filter_by(WordID=word.WordID).first()
     return text.Text
 
-def wordInLineInSong(word_index, line_index, song_name):
+def wordInLineInSong(word_index, line_index, song_name, session):
 
     song = session.query(Song).filter_by(FileName=song_name).first()
     if not song:
@@ -49,7 +43,7 @@ def wordInLineInSong(word_index, line_index, song_name):
     text = session.query(Word).filter_by(WordID=word.WordID).first()
     return text.Text
    
-def wordInVerseInSong(word_index, verse_index, song_name):
+def wordInVerseInSong(word_index, verse_index, song_name, session):
 
     song = session.query(Song).filter_by(FileName=song_name).first()
     if not song:
@@ -69,7 +63,7 @@ def wordInVerseInSong(word_index, verse_index, song_name):
     text = session.query(Word).filter_by(WordID=word.WordID).first()
     return text.Text
    
-def wordInLineInVerseInSong(word_index, line_index, verse_index, song_name):
+def wordInLineInVerseInSong(word_index, line_index, verse_index, song_name, session):
 
     song = session.query(Song).filter_by(FileName=song_name).first()
     if not song:
@@ -94,9 +88,20 @@ def wordInLineInVerseInSong(word_index, line_index, verse_index, song_name):
     text = session.query(Word).filter_by(WordID=word.WordID).first()
     return text.Text
 
+def addToCluster(cluster_name, word_text, session):
+    cluster_id = session.query(Cluster).filter(Cluster.name == cluster_name).first()
+    word_id = session.query(Word).filter(Word.text == word_text).first()
+    # word does not appear in the text
+    # we must add it to the Word table and Lemma table accordingly
+    if not word_id:
+        pass
+    if not cluster_id:
+        entry = WordInCluster(ClusterID=cluster_id, WordID=word_id)
+        session.add(entry)
+        session.commit()
+        print(f"Added word '{word_text}' to cluster {cluster_id}")
 
-
-def findWordMatches(text: str):
+def findWordMatches(text: str, session):
     text = text.lower()
     matches = (
         session.query(WordOccurrence)
@@ -123,8 +128,7 @@ def findWordMatches(text: str):
 
     return res1, res2
 
-
-def findLemmaMatches(text: str):
+def findLemmaMatches(text: str, session):
     text = text.lower()
     lemma_text = lemmatize(text)
     matches = (
@@ -149,7 +153,7 @@ def findLemmaMatches(text: str):
         res2.append(context)
         return res1, res2
     
-def findClusterMatches(name: str):
+def findClusterMatches(name: str, session):
     name = name.lower()
     cluster_id = session.query(Cluster).filter(Cluster.name == name).first().ClusterID
     words = session.query(WordInCluster).filter(Cluster.ClusterID == cluster_id).all()

@@ -6,8 +6,8 @@ engine = create_engine('postgresql+pg8000://postgres:rya33rya@localhost:5432/lyr
 Session = sessionmaker(bind=engine)
 
 # CREATE ALL TABLES
-# Base.metadata.create_all(engine)
-# print("✅ Tables created successfully!")
+Base.metadata.create_all(engine)
+print("✅ Tables created successfully!")
 
 # DROP ALL TABLES
 # Base.metadata.drop_all(engine)

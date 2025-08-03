@@ -2,17 +2,16 @@ const { scrapeLyrics } = require('./scraper');  // assumes scraper.js exports th
 
 // List of songs to scrape
 const songs = [
-  { artist: 'Kendrick Lamar', song: 'wacced out murals' },
-  { artist: 'Kendrick Lamar', song: 'squabble up' },
-  { artist: 'Kendrick Lamar', song: 'man at the garden' },
-  { artist: 'Kendrick Lamar', song: 'hey now' },
-  { artist: 'Kendrick Lamar', song: 'reincarnated' },
-  { artist: 'Kendrick Lamar', song: 'tv off' },
-  { artist: 'Kendrick Lamar', song: 'dodger blue' },
-  { artist: 'Kendrick Lamar', song: 'peekaboo' },
-  { artist: 'Kendrick Lamar', song: 'heart pt. 6' },
-  { artist: 'Kendrick Lamar', song: 'gnx' },
-  { artist: 'Kendrick Lamar', song: 'gloria' }
+  { artist: 'J Cole', song: 'friday night lights' },
+  { artist: 'J Cole', song: 'too deep for the intro' },
+  { artist: 'J Cole', song: 'before im gone' },
+  { artist: 'J Cole', song: 'back to the topic' },
+  { artist: 'J Cole', song: 'you got it' },
+  { artist: 'J Cole', song: 'villematic' },
+  { artist: 'J Cole', song: 'enchanted' },
+  { artist: 'J Cole', song: 'blow up' },
+  { artist: 'J Cole', song: 'higher' },
+  { artist: 'J Cole', song: 'in the morning' },
 ];
 
 (async () => {

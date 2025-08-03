@@ -76,8 +76,8 @@ class Cluster(Base):
     __tablename__ = "clusters"
 
     ClusterID = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
-    description = Column(String)
+    Name = Column(String, unique=True, nullable=False)
+    Description = Column(String)
     
     words = relationship("WordInCluster", back_populates="cluster", cascade="all, delete-orphan")
 
