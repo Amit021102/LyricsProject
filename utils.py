@@ -2,7 +2,8 @@ import spacy
 from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
 nlp = spacy.load("en_core_web_sm")
 
-# number of lines shown before and after a match - default 0
+
+# the number of lines added before and after the wanted line in match finding
 CONTEXT = 2
 
 def lemmatize(word: str):
@@ -26,6 +27,7 @@ def get_or_create_word(session, word_text: str):
     normalized = word_text.lower().strip()
     word = session.query(Word).filter_by(Text=normalized).first()
     if word:
+        word.lemma.TotalOccurrences += 1
         return word
 
     lemma = get_or_create_lemma(session, normalized)

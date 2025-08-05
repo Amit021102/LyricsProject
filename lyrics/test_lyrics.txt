@@ -15,3 +15,9 @@ ran
 run
 run
 rank
+
+Test_word test_word
+test test_word,
+    some punctuation.,:!?
+another test_word
+lemma testing tests tested

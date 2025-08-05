@@ -11,3 +11,4 @@ print("✅ Tables created successfully!")
 
 # DROP ALL TABLES
 # Base.metadata.drop_all(engine)
+# print("✅ Tables dropped successfully!")
