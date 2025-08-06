@@ -56,6 +56,7 @@ class Word(Base):
     lemma = relationship("Lemma", back_populates="words")
     word_occurrences = relationship("WordOccurrence", back_populates="word")
     clusters = relationship("WordInCluster", back_populates="word", cascade="all, delete-orphan")
+    phrases = relationship("WordInPhrase", back_populates="word", cascade="all, delete-orphan")
 
 class WordOccurrence(Base):
     __tablename__ = 'word_occurrences'
@@ -89,3 +90,23 @@ class WordInCluster(Base):
 
     cluster = relationship("Cluster", back_populates="words")
     word = relationship("Word", back_populates="clusters")
+
+class Phrase(Base):
+    __tablename__ = "phrases"
+
+    PhraseID = Column(Integer, primary_key=True)
+    Name = Column(String, unique=True, nullable=False)
+    Description = Column(String)
+    
+    words = relationship("WordInPhrase", back_populates="phrase", cascade="all, delete-orphan")
+
+class WordInPhrase(Base):
+    __tablename__ = "word_in_phrase"
+  
+    PhraseID = Column(Integer, ForeignKey("phrases.PhraseID"), primary_key=True)
+    WordIndexInPhrase = Column(Integer, primary_key=True)
+    WordID = Column(Integer, ForeignKey("words.WordID"), ForeignKey("words.WordID"))
+    
+    phrase = relationship("Phrase", back_populates="words")
+    word = relationship("Word", back_populates="phrases")
+

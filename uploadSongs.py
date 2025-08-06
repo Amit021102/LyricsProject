@@ -10,14 +10,12 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 # Step 2: Path to the lyrics file(s)
-# lyrics_dir = "lyrics"
-# for filename in os.listdir(lyrics_dir):
-#     if filename.endswith(".txt") and filename != "test_lyrics":
-#         path = os.path.join(lyrics_dir, filename)
-#         print(f"Uploading {path}...")
-#         process_song(path, session)
-
-process_song("lyrics/test_lyrics.txt", session)
+lyrics_dir = "lyrics"
+for filename in os.listdir(lyrics_dir):
+    if filename.endswith(".txt") and filename != "test_lyrics.txt":
+        path = os.path.join(lyrics_dir, filename)
+        print(f"Uploading {path}...")
+        process_song(path, session)
 
 # Step 3: Save changes
 session.commit()

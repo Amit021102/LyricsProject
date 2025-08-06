@@ -4,7 +4,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import pytest
 from setup_db import Session  # or however you get a session
-from queries import CONTEXT ,wordInSong, wordInLineInSong, wordInVerseInSong, wordInLineInVerseInSong, findWordMatches, findLemmaMatches, findClusterMatches
+from queries import CONTEXT ,wordInSong, wordInLineInSong, wordInVerseInSong, wordInLineInVerseInSong, findWordMatches, findLemmaMatches, findClusterMatches, findPhraseMatches
+from utils import add_to_cluster, get_or_create_phrase
 from lyricsProgram import process_song
 
 
@@ -23,7 +24,6 @@ def test_word_in_song(session):
     assert wordInSong(190, "test_lyrics.txt", session) is None
     assert wordInSong(12, "test_lyrics.txt", session) == "h"
 
-
 def test_word_in_line_in_song(session):
 
     process_song("lyrics/test_lyrics.txt", session)
@@ -33,7 +33,6 @@ def test_word_in_line_in_song(session):
     assert wordInLineInSong(2, 100, "test_lyrics.txt", session) is None
     assert wordInLineInSong(2, 5, "test_lyrics.txt", session) == "z"
 
-
 def test_word_in_verse_in_song(session):
 
     process_song("lyrics/test_lyrics.txt", session)
@@ -42,7 +41,6 @@ def test_word_in_verse_in_song(session):
     assert wordInVerseInSong(56, 1, "test_lyrics.txt", session) is None
     assert wordInVerseInSong(2, 100, "test_lyrics.txt", session) is None
     assert wordInVerseInSong(2, 3, "test_lyrics.txt", session) == "is"
-
 
 def test_word_in_line_in_verse_in_song(session):
 
@@ -59,17 +57,16 @@ def test_find_word_matches(session):
 
     process_song("lyrics/test_lyrics.txt", session)
 
-    res1, res2 = findWordMatches("test_word", session)
-    assert len(res1) == 4
-    for match in res1:
+    matches = findWordMatches("test_word", session)
+    assert len(matches) == 4
+    for match in matches:
         assert match.word.Text == "test_word"
 
-    assert res1[0].line.LineNumberInSong == 16
-    assert res1[1].line.LineNumberInSong == 16
-    assert res1[2].line.LineNumberInSong == 17
-    assert res1[3].line.LineNumberInSong == 19
+    assert matches[0].line.LineNumberInSong == 16
+    assert matches[1].line.LineNumberInSong == 16
+    assert matches[2].line.LineNumberInSong == 17
+    assert matches[3].line.LineNumberInSong == 19
 
-    assert res2[0][CONTEXT] == "Test_word test_word"
 
 def test_find_lemma_match(session):
     from models import Lemma
@@ -77,27 +74,19 @@ def test_find_lemma_match(session):
     process_song("lyrics/test_lyrics.txt", session)
 
     
-    res1, res2 = findLemmaMatches("test", session)
-    new_res1, new_res2 = [], []
+    matches = findLemmaMatches("test", session)
+    rel_matches = [match for match in matches if match.song.FileName=="test_lyrics.txt"]
 
-    for i in range(len(res1)):
-        if res1[i].song.FileName == "test_lyrics.txt":
-            new_res1.append(res1[i])
-            new_res2.append(res2[i])
-            assert res1[i].word.lemma.Text == "test"
-
-    assert len(new_res1) == 6
-    assert new_res1[0].line.LineNumberInSong == 1
-    assert new_res1[1].line.LineNumberInSong == 6
-    assert new_res1[2].line.LineNumberInSong == 10
-    assert new_res1[3].line.LineNumberInSong == 17
-    assert new_res1[4].line.LineNumberInSong == 20
-    assert new_res1[5].line.LineNumberInSong == 20
-
-    assert new_res2[2][CONTEXT] == "this is a test again"
+    assert len(rel_matches) == 6
+    assert rel_matches[0].line.LineNumberInSong == 1
+    assert rel_matches[1].line.LineNumberInSong == 6
+    assert rel_matches[2].line.LineNumberInSong == 10
+    assert rel_matches[3].line.LineNumberInSong == 17
+    assert rel_matches[4].line.LineNumberInSong == 20
+    assert rel_matches[5].line.LineNumberInSong == 20
 
 def test_find_cluster_match(session):
-    from models import Word, Cluster, WordInCluster
+    from models import Cluster
 
     process_song("lyrics/test_lyrics.txt", session)
 
@@ -106,37 +95,39 @@ def test_find_cluster_match(session):
     session.flush()
 
     for i in range(1, 10):
-        digit = session.query(Word).filter_by(Text=str(i)).first()
-        print(f'digit {i}\'s id is {digit.WordID}')
-        digit_in_cluster = WordInCluster(ClusterID=test_cluster.ClusterID, WordID=digit.WordID)
-        session.add(digit_in_cluster)
+        add_to_cluster(session, str(i), "test_digits")
 
     session.flush()
+
+    matches = findClusterMatches("test_digits", session)
+
+    rel_matches = [match for match in matches if match.song.FileName=="test_lyrics.txt"]
+
+    assert len(rel_matches) == 9
+    assert rel_matches[0].line.LineNumberInSong == 7
+    assert rel_matches[4].line.LineNumberInSong == 8
+    assert rel_matches[8].line.LineNumberInSong == 9
+
+
+def test_find_phrase_matches(session):
+
+    from models import Song
+
+    get_or_create_phrase(session, "this is a test")
+    session.flush()
+    process_song("lyrics/test_lyrics.txt", session)
+    test_song_id = session.query(Song).filter_by(FileName="test_lyrics.txt").first().SongID
     
+    matches = findPhraseMatches("This is-a test?!", session)
 
-    print('before')
-    res1, res2 = findClusterMatches("test_digits", session)
-    new_res1, new_res2 = [], []
-    print('after')
-    print(f'number of matches in res1 is {len(res1)}')
-    print(f'number of matches in res2 is {len(res2)}')
+    rel_matches = []
 
-    for i in range(len(res1)):
+    for i in range(len(matches)):
+        if matches[i].SongID == test_song_id:
+            rel_matches.append(matches[i])
 
-        print(f'handling with {res1[i].word.Text} of index {res1[i].WordIndex}')
 
-        if res1[i].song.FileName == "test_lyrics.txt":
-            new_res1.append(res1[i])
-            new_res2.append(res2[i])
-            print(f"inserted {new_res1[-1].word.Text}")
-            assert res1[i].word.Text.isdigit() == True
+    assert len(rel_matches) == 2
 
-    print('continued')
-
-    assert len(new_res1) == 9
-    assert new_res1[0].line.LineNumberInSong == 7
-    assert new_res1[4].line.LineNumberInSong == 8
-    assert new_res1[8].line.LineNumberInSong == 9
-
-    assert new_res2[6][CONTEXT] == "7 8 9"
-
+    assert rel_matches[0].line.LineNumberInSong == 1
+    assert rel_matches[1].line.LineNumberInSong == 10

@@ -1,5 +1,5 @@
-from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
-from utils import lemmatize, limitContext, CONTEXT
+from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster, Phrase, WordInPhrase
+from utils import lemmatize, limit_context, CONTEXT
 
 
 
@@ -86,6 +86,8 @@ def wordInLineInVerseInSong(word_index, line_index, verse_index, song_name, sess
     text = session.query(Word).filter_by(WordID=word.WordID).first()
     return text.Text
 
+
+
 def findWordMatches(text: str, session):
     text = text.lower()
     matches = (
@@ -97,18 +99,7 @@ def findWordMatches(text: str, session):
     if not matches:
         print(f"No matches found for word '{text}'")
 
-    res1 = []
-    res2 = []
-    for instance in matches:
-        context = []
-        begin, end = limitContext(instance)
-        for i in range(begin, end+1):
-            line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
-            context.append(line_text)
-        res1.append(instance)
-        res2.append(context)
-
-    return res1, res2
+    return matches
 
 def findLemmaMatches(text: str, session):
     text = text.lower()
@@ -117,7 +108,7 @@ def findLemmaMatches(text: str, session):
     lemma = session.query(Lemma).filter_by(Text=lemma_text).first()
     if lemma is None:
         print(f"No matches found for lemma '{lemma_text}'")
-        return [], []
+        return []
 
 
     matches = (
@@ -127,42 +118,65 @@ def findLemmaMatches(text: str, session):
         .all()
     )
 
-    res2 = []
-    for instance in matches:
-        context = []
-        begin, end = limitContext(instance)
-        for i in range(begin, end+1):
-            line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
-            context.append(line_text)
-        res2.append(context)
-    return matches, res2
+    return matches
     
 def findClusterMatches(name: str, session):
     name = name.lower()
     cluster_id = session.query(Cluster).filter(Cluster.Name == name).first().ClusterID
-    words = session.query(WordInCluster).filter(Cluster.ClusterID == cluster_id).all()
+    if not cluster_id:
+        print(f"No cluster named '{name}' in the DB")
+        return []
 
-    res1 = []
-    res2 = []
+    words = session.query(WordInCluster).filter(WordInCluster.ClusterID == cluster_id).all()
+
+    matches = []
 
     for word in words:
-        matches = (
-            session.query(WordOccurrence)
-            .join(Word)
-            .filter(WordOccurrence.WordID == word.WordID)
-            .all()
-        )
-        if not matches:
-            print(f"No matches found for word '{word.word.Text}'")
+        res1 = findWordMatches(word.word.Text, session)
+        matches += res1
 
-        
-        for instance in matches:
-            context = []
-            begin, end = limitContext(instance)
-            for i in range(begin, end+1):
-                line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
-                context.append(line_text)
-            res1.append(instance)
-            res2.append(context)
+    return matches
 
-    return res1, res2
+def findPhraseMatches(name: str, session):
+    import re
+    from collections import defaultdict
+
+    valid_phrase = re.sub(r"[^\w\s]", ' ', name).lower().strip()
+
+    print(f'valid phrae is \'{valid_phrase}\'')
+
+    phrase_id = session.query(Phrase).filter(Phrase.Name == valid_phrase).first().PhraseID
+    if not phrase_id:
+        print(f"No phrase named '{valid_phrase}' saved in the DB")
+        return []
+    
+    word_ids = [wid for (wid,) in session.query(WordInPhrase.WordID).filter_by(PhraseID=phrase_id).all()]
+    
+    occurrences = (
+        session.query(WordOccurrence)
+        .filter(WordOccurrence.WordID.in_(word_ids))
+        .order_by(WordOccurrence.SongID, WordOccurrence.LineID, WordOccurrence.WordInLine)
+        .all()
+    )
+
+    print('here')
+
+    # Group occurrences by song+line
+    grouped = defaultdict(list)
+    for occ in occurrences:
+        key = (occ.SongID, occ.LineID)
+        grouped[key].append(occ)
+
+    # Phrase matching using sliding window
+    matches = []
+    for occ_list in grouped.values():
+        # sorting each line value of the dict by order of appearence
+        occ_list.sort(key=lambda o: o.WordInLine)
+        for i in range(len(occ_list) - len(word_ids) + 1):
+            window = occ_list[i:i+len(word_ids)]
+            if all(window[j].WordID == word_ids[j] and
+                window[j].WordInLine == window[0].WordInLine + j
+                for j in range(len(word_ids))):
+                matches.append(window[0])
+
+    return matches

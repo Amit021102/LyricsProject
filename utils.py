@@ -1,5 +1,5 @@
 import spacy
-from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster
+from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster, Phrase, WordInPhrase
 nlp = spacy.load("en_core_web_sm")
 
 
@@ -11,8 +11,7 @@ def lemmatize(word: str):
     doc = nlp(word)
     return doc[0].lemma_
 
-
-def limitContext(occurrence: WordOccurrence):
+def limit_context(occurrence: WordOccurrence):
     mid = occurrence.line.LineNumberInSong
     last_line = occurrence.song.NumberOfLines
 
@@ -20,6 +19,22 @@ def limitContext(occurrence: WordOccurrence):
     end = min(last_line, mid + CONTEXT)
 
     return (begin, end)
+
+def get_context(session, matches: list[WordOccurrence]):
+    
+    if not matches:
+        return []
+    
+    contexts = []
+    for instance in matches:
+        context = []
+        begin, end = limit_context(instance)
+        for i in range(begin, end+1):
+            line_text = session.query(Line).filter_by(SongID=instance.SongID, LineNumberInSong=i).first().Text
+            context.append(line_text)
+        contexts.append(context)
+
+    return contexts
 
 
 def get_or_create_word(session, word_text: str):
@@ -37,7 +52,6 @@ def get_or_create_word(session, word_text: str):
     session.flush()  # So it gets a WordID before commit
     return word
 
-
 def get_or_create_lemma(session, word_text: str):
     lemma_text = lemmatize(word_text)
     lemma = session.query(Lemma).filter_by(Text=lemma_text).first()
@@ -49,6 +63,9 @@ def get_or_create_lemma(session, word_text: str):
     session.flush()
     return lemma
 
+
+# THE 2 METHODS DO NOT SUPPORT ADDING THE DESCRIPTION JUST YET!
+# ADD THAT IN THE FUTURE
 
 def add_to_cluster(session, word_text: str, cluster_name: str):
 
@@ -67,6 +84,32 @@ def add_to_cluster(session, word_text: str, cluster_name: str):
         print(f"'{word_text}' is already in cluster '{cluster_name}'")
     else:
         session.add(WordInCluster(WordID=word.WordID, ClusterID=cluster.ClusterID))
-        session.commit()
+        session.flush()
         print(f"Added '{word_text}' to cluster '{cluster_name}'")
+
+def get_or_create_phrase(session, phrase_words: str):
+    import re
+
+    valid_phrase = re.sub(r"[^\w\s]", ' ', phrase_words).strip()
+
+    phrase = session.query(Phrase).filter_by(Name=valid_phrase).first()
+    # if the phrase already exists
+    if phrase:
+        return phrase
+    # if not, we create it:
+    phrase = Phrase(Name=valid_phrase)
+    session.add(phrase)
+    session.flush()
+
+    indexInPhrase = 1
+    parts = valid_phrase.split()
+    for part in parts:
+        part = part.lower()
+        word = get_or_create_word(session, part)
+        phraseWord = WordInPhrase(PhraseID=phrase.PhraseID, WordIndexInPhrase=indexInPhrase, WordID=word.WordID)
+        session.add(phraseWord)
+        indexInPhrase += 1
+
+    session.commit()
+    return phrase
 
