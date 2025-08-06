@@ -1,8 +1,9 @@
 from models import Song, Verse, Line, Word, Lemma, WordOccurrence, Cluster, WordInCluster, Phrase, WordInPhrase
-from utils import lemmatize, limit_context, CONTEXT
+from utils import lemmatize
 
 
 
+# STANDARD WORD LOCATIONS
 
 def wordInSong(index, song_name, session):
 
@@ -87,6 +88,7 @@ def wordInLineInVerseInSong(word_index, line_index, verse_index, song_name, sess
     return text.Text
 
 
+# COMPLEX MATCH FINDING
 
 def findWordMatches(text: str, session):
     text = text.lower()
@@ -143,8 +145,6 @@ def findPhraseMatches(name: str, session):
 
     valid_phrase = re.sub(r"[^\w\s]", ' ', name).lower().strip()
 
-    print(f'valid phrae is \'{valid_phrase}\'')
-
     phrase_id = session.query(Phrase).filter(Phrase.Name == valid_phrase).first().PhraseID
     if not phrase_id:
         print(f"No phrase named '{valid_phrase}' saved in the DB")
@@ -180,3 +180,220 @@ def findPhraseMatches(name: str, session):
                 matches.append(window[0])
 
     return matches
+
+
+# STATISTICAL DATA
+
+# chars in - word, line, verse, song
+# words in - line, verse, song
+# lines in - verse, song
+# verses in - song
+
+def chars_in_word(session, word_id: int):
+
+    word = session.query(Word).filter_by(WordID=word_id).first()
+
+    if not word:
+        print(f"word '{word_id}' not in DB")
+        return
+    
+    return word.WordLength
+
+def chars_in_line(session, line_number: int, song_id: int, verse_number=0):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+
+    # verse number passed, line number is relative to verse
+    if verse_number:
+        verse = session.query(Verse).filter_by(VerseOrder=verse_number, SongID=song_id).first()
+        if not verse:
+            print(f'The song has less than {verse_number} verses')
+            return 0
+        line = session.query(Line).filter_by(LineNumberInVerse=line_number, VerseID=verse.VerseID).first()        
+        if not line:
+            print(f'Verse {verse_number} in the song has less than {line_number} lines')
+            return 0
+    # verse number not passed, line number is relative to song
+    else:
+        line = session.query(Line).filter_by(LineNumberInSong=line_number, SongID=song_id).first()
+        if not line:
+            print(f'The song has less than {line_number} lines')
+            return 0
+        
+    total_chars = (
+        session.query(func.sum(Word.WordLength))
+        .join(WordOccurrence, Word.WordID == WordOccurrence.WordID)
+        .filter(WordOccurrence.LineID == line.LineID)
+        .scalar()
+    )
+
+    total_chars = total_chars or 0
+
+    print('Success!')
+    return total_chars
+
+def chars_in_verse(session, verse_number: int, song_id: int):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+
+    verse = session.query(Verse).filter_by(VerseOrder=verse_number, SongID=song_id).first()
+    if not verse:
+        print(f'The song has less than {verse_number} verses')
+        return 0
+
+    total_chars = (
+        session.query(func.sum(Word.WordLength))
+        .join(WordOccurrence, Word.WordID == WordOccurrence.WordID)
+        .filter(WordOccurrence.VerseID == verse.VerseID)
+        .scalar()
+    )
+
+    total_chars = total_chars or 0
+
+    print('Success!')
+    return total_chars
+
+def chars_in_song(session, song_id: int):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+    
+    total_chars = (
+        session.query(func.sum(Word.WordLength))
+        .join(WordOccurrence, Word.WordID == WordOccurrence.WordID)
+        .filter(WordOccurrence.SongID == song_id)
+        .scalar()
+    )
+
+    total_chars = total_chars or 0
+
+    print('Success!')
+    return total_chars
+
+
+
+def words_in_line(session, line_number: int, song_id: int, verse_number=0):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+
+    # verse number passed, line number is relative to verse
+    if verse_number:
+        verse = session.query(Verse).filter_by(VerseOrder=verse_number, SongID=song_id).first()
+        if not verse:
+            print(f'The song has less than {verse_number} verses')
+            return 0
+        line = session.query(Line).filter_by(LineNumberInVerse=line_number, VerseID=verse.VerseID).first()        
+        if not line:
+            print(f'Verse {verse_number} in the song has less than {line_number} lines')
+            return 0
+    # verse number not passed, line number is relative to song
+    else:
+        line = session.query(Line).filter_by(LineNumberInSong=line_number, SongID=song_id).first()
+        if not line:
+            print(f'The song has less than {line_number} lines')
+            return 0
+        
+    total_words = (
+        session.query(func.count(WordOccurrence.WordID))
+        .filter(WordOccurrence.LineID == line.LineID)
+        .scalar()
+    )
+
+    total_words = total_words or 0
+
+    print('Success!')
+    return total_words
+
+def words_in_verse(session, verse_number: int, song_id: int):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+
+    verse = session.query(Verse).filter_by(VerseOrder=verse_number, SongID=song_id).first()
+    if not verse:
+        print(f'The song has less than {verse_number} verses')
+        return 0
+
+    print('Success!')
+    return verse.WordCounter
+
+def words_in_song(session, song_id: int):
+
+    from sqlalchemy import func
+
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+ 
+    total_words = (
+        session.query(func.count(WordOccurrence.WordID))
+        .filter(WordOccurrence.SongID == song_id)
+        .scalar()
+    )
+
+    total_words = total_words or 0
+
+    print('Success!')
+    return total_words
+
+
+
+def lines_in_verse(session, verse_number: int, song_id: int):
+    from sqlalchemy import func
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+    
+    verse = session.query(Verse).filter_by(SongID=song_id, VerseOrder=verse_number).first()
+    if not verse:
+        print(f'The song has less than {verse_number} verses')
+        return 0
+
+    return session.query(func.count(Line.LineID)).filter_by(VerseID=verse.VerseID).scalar()
+
+def lines_in_song(session, song_id: int):
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+    
+    return session.query(Song).filter_by(SongID=song_id).first().NumberOfLines
+
+
+
+def verses_in_song(session, song_id: int):
+
+    from sqlalchemy import func
+
+    if session.query(Song).filter_by(SongID=song_id).first() is None:
+        print(f'No song matches the ID {song_id}')
+        return 0
+    
+    return session.query(func.count(Verse.VerseID)).filter_by(SongID=song_id).scalar()
+
+
